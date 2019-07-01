@@ -16,6 +16,7 @@ num_sample_plot = 200
 
 # load and analyse iris dataset (Classification)
 def load_analyze_data_iris(data, vis_feature='petal', plot=False):
+    print('\nClassification Problem: iris Data set')
     print('feature names: ', list(data['feature_names']))
     print('target names: ', list(data['target_names']))
     data = pd.DataFrame(data=np.append(data['data'], data['target'][:, np.newaxis], axis=1),
@@ -37,7 +38,7 @@ def load_analyze_data_iris(data, vis_feature='petal', plot=False):
         plt.ylabel('number of samples')
     print('features mean: ', np.mean(data.values[:, :-1], axis=0))
     print('features variance: ', np.var(data.values[:, :-1], axis=0))
-    print('features covariance: \n', np.cov(data.values[:, :-1].T))
+    # print('features covariance: \n', np.cov(data.values[:, :-1].T))
     print('\nThe function has two outputs, i.e. original dataset as well as a filtered dataset with only two features\n'
           'useful for visualization. If so, choose either sepal or petal as input.')
     data_filtered = data
@@ -52,6 +53,7 @@ def load_analyze_data_iris(data, vis_feature='petal', plot=False):
 
 # Load and analyze boston dataset (Regression)
 def load_analyze_data_boston(data, plot=False):
+    print('\nRegression Problem: Boston Data set')
     print('feature names: ', list(data['feature_names']))
     data = pd.DataFrame(data=np.append(data['data'], data['target'][:, np.newaxis], axis=1),
                         columns=np.append(data['feature_names'], 'target'))
@@ -72,7 +74,7 @@ def load_analyze_data_boston(data, plot=False):
         plt.ylabel('number of samples')
     print('features mean: ', np.mean(data.values[:, :-1], axis=0))
     print('features variance: ', np.var(data.values[:, :-1], axis=0))
-    print('features covariance: \n', np.cov(data.values[:, :-1].T))
+    # print('features covariance: \n', np.cov(data.values[:, :-1].T))
     return data, {'features_mean': np.mean(data.values[:, :-1], axis=0),
                   'features_variance': np.var(data.values[:, :-1], axis=0),
                   'features_covariance': np.cov(data.values[:, :-1].T)}
@@ -143,7 +145,7 @@ def decision_trees_classification(data, criterion='gini', max_depth=None, plot=T
             except:
                 print('An error occurred while visualizing the tree!')
 
-    return features_classes, {'models': model, 'score_test': score_test, 'score_train': score_train, 'Tree': Tree}
+    return {'models': model, 'score_test': score_test, 'score_train': score_train, 'Tree': Tree}
 
 
 # Regression problem
