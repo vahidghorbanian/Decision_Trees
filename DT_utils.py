@@ -10,30 +10,29 @@ from subprocess import call
 import sys
 
 # Initialization
-bins = 20
-alpha = 0.8
+bins = 50
+alpha = 1
 num_sample_plot = 200
 
-# load and analyse datasets
-def load_analyze_data(data, vis_feature='petal', plot=False):
+# load and analyse iris dataset (Classification)
+def load_analyze_data_iris(data, vis_feature='petal', plot=False):
     print('feature names: ', list(data['feature_names']))
     print('target names: ', list(data['target_names']))
-    data = pd.DataFrame(data=np.append(data['data'], data['target'][:, np.newaxis],axis=1),
+    data = pd.DataFrame(data=np.append(data['data'], data['target'][:, np.newaxis], axis=1),
                         columns=np.append(data['feature_names'], 'target'))
-    if len(data.values[:,-1]) > len(np.unique(data['target'])):
-        print('This is a classification problem.')
-        print('number of classes: ', len(np.unique(data['target'])))
-    else:
-        print('This is a regression problem.')
     if plot == True:
         data.loc[:, data.columns != 'target'].hist(bins=bins, edgecolor=[0, 0, 0], alpha=alpha)
+        plt.tight_layout()
         f = plt.gcf()
         for i in np.arange(0, len(f.axes), 1):
             ax = f.axes[i]
             ax.legend([ax.title._text])
             ax.title._text = ''
             ax.yaxis.label._text = 'number of samples'
+            ax.yaxis.label._fontproperties._size = 6
+        plt.suptitle('Classification problem: iris data set')
         data.loc[:, data.columns == 'target'].hist(bins=bins, edgecolor=[0, 0, 0], alpha=alpha)
+        plt.suptitle('Classification problem: iris data set')
         plt.xlabel('classes')
         plt.ylabel('number of samples')
     print('features mean: ', np.mean(data.values[:, :-1], axis=0))
@@ -46,9 +45,40 @@ def load_analyze_data(data, vis_feature='petal', plot=False):
         data_filtered = data_filtered.drop(['sepal length (cm)', 'sepal width (cm)'], axis=1)
     else:
         data_filtered = data_filtered.drop(['petal length (cm)', 'petal width (cm)'], axis=1)
-    return data, data_filtered
+    return data, data_filtered, {'features_mean': np.mean(data.values[:, :-1], axis=0),
+                  'features_variance': np.var(data.values[:, :-1], axis=0),
+                  'features_covariance': np.cov(data.values[:, :-1].T)}
 
 
+# Load and analyze boston dataset (Regression)
+def load_analyze_data_boston(data, plot=False):
+    print('feature names: ', list(data['feature_names']))
+    data = pd.DataFrame(data=np.append(data['data'], data['target'][:, np.newaxis], axis=1),
+                        columns=np.append(data['feature_names'], 'target'))
+    if plot == True:
+        data.loc[:, data.columns != 'target'].hist(bins=bins, edgecolor=[0, 0, 0], alpha=alpha)
+        plt.tight_layout()
+        f = plt.gcf()
+        for i in np.arange(0, len(f.axes), 1):
+            ax = f.axes[i]
+            ax.legend([ax.title._text], fontsize=6)
+            ax.title._text = ''
+            ax.yaxis.label._text = 'number of samples'
+            ax.yaxis.label._fontproperties._size = 8
+        plt.suptitle('Regression problem: boston dataset')
+        data.loc[:, data.columns == 'target'].hist(bins=bins, edgecolor=[0, 0, 0], alpha=alpha)
+        plt.suptitle('Regression problem: boston dataset')
+        plt.xlabel('classes')
+        plt.ylabel('number of samples')
+    print('features mean: ', np.mean(data.values[:, :-1], axis=0))
+    print('features variance: ', np.var(data.values[:, :-1], axis=0))
+    print('features covariance: \n', np.cov(data.values[:, :-1].T))
+    return data, {'features_mean': np.mean(data.values[:, :-1], axis=0),
+                  'features_variance': np.var(data.values[:, :-1], axis=0),
+                  'features_covariance': np.cov(data.values[:, :-1].T)}
+
+
+# Classification problem
 def decision_trees_classification(data, criterion='gini', max_depth=None, plot=True,
                                                           vis_tree=False):
     X = data.values[:, :-1]
@@ -89,13 +119,16 @@ def decision_trees_classification(data, criterion='gini', max_depth=None, plot=T
                     ax = fig.add_subplot(int(len(model)), int(num_class[i]), k)
                     plt.pcolormesh(xx, yy, Z[:, j].reshape(xx.shape))
                     plt.colorbar()
-                    ax.title.set_text('Criterion:'+model[i].criterion+'\nclass'+str(j+1)+', max_depth='+str(Tree[i].max_depth))
+                    ax.title.set_text('Criterion:'+model[i].criterion+'\nclass '+str(j+1)+', depth='+str(Tree[i].max_depth))
+                    ax.title._fontproperties._size = 10
                     ax.xaxis.label.set_text(data.columns[0])
                     ax.yaxis.label.set_text(data.columns[1])
                     plt.tight_layout()
                     plt.scatter(features_classes[cls][:, 0], features_classes[cls][:, 1], s=20, marker='o',
                     linewidths=1, edgecolors=[0, 0, 0], facecolor=[0.8, 0.8, 0.8], alpha=alpha)
                     k = k + 1
+            plt.suptitle('Classification problem: iris data set')
+            plt.tight_layout()
 
     # Visualize Tree
     if vis_tree == True:
@@ -113,8 +146,53 @@ def decision_trees_classification(data, criterion='gini', max_depth=None, plot=T
     return features_classes, {'models': model, 'score_test': score_test, 'score_train': score_train, 'Tree': Tree}
 
 
+# Regression problem
+def decision_trees_regression(data, criterion='mse', max_depth=None, plot=True):
+    X = data.values[:, :-1]
+    y = np.ravel(data.values[:, -1])
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+    model = [DecisionTreeRegressor(criterion=criterion, splitter='best', max_depth=max_depth, min_samples_split=2,
+                                    random_state=0)]
+    score_test  = []
+    score_train = []
+    Tree        = []
+    feature_importance = []
 
+    for i in np.arange(0, len(model), 1):
+        model[i].fit(X_train, y_train)
+        score_test.append(model[i].score(X_test, y_test))
+        score_train.append(model[i].score(X_train, y_train))
+        feature_importance.append(model[i].feature_importances_)
+        Tree.append(model[i].tree_)
+        print('\ntest score:\n', score_test)
+        print('training score:\n', score_train)
 
+    if plot == True:
+        k = 1
+        fig = plt.figure(figsize=(10, 3*len(model)))
+        for i in np.arange(0, len(model), 1):
+            y_test_predict  = model[i].predict(X_test)
+            y_train_predict = model[i].predict(X_train)
+            fig.add_subplot(int(len(model)), 2, k)
+            plt.scatter(y_train,y_train_predict, s=20, marker='o',
+                    linewidths=1, edgecolors=[0, 0, 0], facecolor=[0.8, 0.8, 0], alpha=alpha)
+            plt.xlabel('target')
+            plt.ylabel('Prediction')
+            plt.title('Training set')
+            plt.tight_layout()
+            fig.add_subplot(int(len(model)), 2, k+1)
+            plt.scatter(y_test, y_test_predict, s=20, marker='o',
+                    linewidths=1, edgecolors=[0, 0, 0], facecolor=[0.8, 0.8, 0], alpha=alpha)
+            plt.xlabel('target')
+            plt.ylabel('Prediction')
+            plt.title('test set')
+            plt.tight_layout()
+            k = k + 2
+        plt.suptitle('Regression problem: boston dataset\n'
+                     'criterion: '+criterion+' Depth: '+str(Tree[i].max_depth))
+
+    return {'models': model, 'score_test': score_test, 'score_train': score_train,
+            'feature_importance': feature_importance, 'Tree': Tree}
 
 
 
