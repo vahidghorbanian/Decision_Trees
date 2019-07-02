@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.datasets import load_iris, load_boston
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
 from sklearn import tree
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
@@ -85,9 +86,9 @@ def decision_trees_classification(data, criterion='gini', max_depth=None, plot=T
                                                           vis_tree=False):
     X = data.values[:, :-1]
     y = np.ravel(data.values[:, -1])
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=0)
     model = [DecisionTreeClassifier(criterion=criterion, splitter='best', max_depth=max_depth, min_samples_split=2,
-                                    random_state=0)]
+                                    random_state=0, presort=False)]
     score_test = []
     score_train = []
     num_class = []
@@ -149,49 +150,52 @@ def decision_trees_classification(data, criterion='gini', max_depth=None, plot=T
 
 
 # Regression problem
-def decision_trees_regression(data, criterion='mse', max_depth=None, plot=True):
+def decision_trees_regression(data, criterion='mse', max_depth=None, n_estimator=100, plot=True):
     X = data.values[:, :-1]
     y = np.ravel(data.values[:, -1])
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
-    model = [DecisionTreeRegressor(criterion=criterion, splitter='best', max_depth=max_depth, min_samples_split=2,
-                                    random_state=0)]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=0)
+    model = {'model': [DecisionTreeRegressor(criterion=criterion, splitter='best', max_depth=max_depth,
+                                             min_samples_split=2,random_state=0, presort=False),
+             RandomForestRegressor(n_estimators=n_estimator, criterion=criterion, random_state=0, max_depth=max_depth,
+                                   min_samples_split=2)], 'model_name': list(['Tree',
+                                                                              'Forest(n_estimator='+str(n_estimator)+')'])}
     score_test  = []
     score_train = []
     Tree        = []
     feature_importance = []
 
-    for i in np.arange(0, len(model), 1):
-        model[i].fit(X_train, y_train)
-        score_test.append(model[i].score(X_test, y_test))
-        score_train.append(model[i].score(X_train, y_train))
-        feature_importance.append(model[i].feature_importances_)
-        Tree.append(model[i].tree_)
-        print('\ntest score:\n', score_test)
-        print('training score:\n', score_train)
+    for i in np.arange(0, len(model['model']), 1):
+        model['model'][i].fit(X_train, y_train)
+        score_test.append(model['model'][i].score(X_test, y_test))
+        score_train.append(model['model'][i].score(X_train, y_train))
+        feature_importance.append(model['model'][i].feature_importances_)
+        # Tree.append(model[i]['model'].tree_)
+    print('\ntest score:\n', score_test)
+    print('training score:\n', score_train)
 
     if plot == True:
         k = 1
         fig = plt.figure(figsize=(10, 3*len(model)))
         for i in np.arange(0, len(model), 1):
-            y_test_predict  = model[i].predict(X_test)
-            y_train_predict = model[i].predict(X_train)
-            fig.add_subplot(int(len(model)), 2, k)
+            y_test_predict  = model['model'][i].predict(X_test)
+            y_train_predict = model['model'][i].predict(X_train)
+            fig.add_subplot(int(len(model['model'])), 2, k)
             plt.scatter(y_train,y_train_predict, s=20, marker='o',
                     linewidths=1, edgecolors=[0, 0, 0], facecolor=[0.8, 0.8, 0], alpha=alpha)
             plt.xlabel('target')
             plt.ylabel('Prediction')
-            plt.title('Training set')
+            plt.title(model['model_name'][i]+': Training set')
             plt.tight_layout()
-            fig.add_subplot(int(len(model)), 2, k+1)
+            fig.add_subplot(int(len(model['model'])), 2, k+1)
             plt.scatter(y_test, y_test_predict, s=20, marker='o',
                     linewidths=1, edgecolors=[0, 0, 0], facecolor=[0.8, 0.8, 0], alpha=alpha)
             plt.xlabel('target')
             plt.ylabel('Prediction')
-            plt.title('test set')
+            plt.title(model['model_name'][i]+': test set')
             plt.tight_layout()
             k = k + 2
-        plt.suptitle('Regression problem: boston dataset\n'
-                     'criterion: '+criterion+' Depth: '+str(Tree[i].max_depth))
+        # plt.suptitle('Regression problem: boston dataset\n'
+        #              'criterion: '+criterion+' Depth: '+str(Tree[i].max_depth))
 
     return {'models': model, 'score_test': score_test, 'score_train': score_train,
             'feature_importance': feature_importance, 'Tree': Tree}
